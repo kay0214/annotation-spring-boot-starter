@@ -14,7 +14,7 @@ import java.util.List;
 public enum LogContentEnums {
     /**
      * LOG显示内容枚举
-     * CLASS:显示类名
+     * CLZ:显示类名
      * METHOD:显示方法名
      * URI:显示请求路径
      * REQUEST_METHOD:请求方式GET,POST
@@ -24,29 +24,29 @@ public enum LogContentEnums {
      * CONTENT_LENGTH:显示请求长度
      * HEADER:显示请求头
      * PARAM_ENCODE:显示请求参数字符集
-     * PARAM:显示请求参数
-     * RETURN:显示返回参数
+     * REQUEST:显示请求参数
+     * RESPONSE:显示返回参数
      * */
-    CLASS,METHOD,URI,REQUEST_METHOD,IP,TIME,CONTENT_TYPE,CONTENT_LENGTH,HEADER,PARAM_ENCODE,PARAM,RETURN;
+    CLZ, METHOD, URI, REQUEST_METHOD, IP, TIME, CONTENT_TYPE, CONTENT_LENGTH, HEADER, PARAM_ENCODE, REQUEST, RESPONSE;
 
     /**
      * 获取所有类型
      * */
     public static List<LogContentEnums> getAllEnums(){
-        return Arrays.asList(CLASS,METHOD,URI,REQUEST_METHOD,IP,TIME,CONTENT_TYPE,CONTENT_LENGTH,HEADER,PARAM_ENCODE,PARAM,RETURN);
+        return Arrays.asList(CLZ, METHOD, URI, REQUEST_METHOD, IP, TIME, CONTENT_TYPE, CONTENT_LENGTH, HEADER,PARAM_ENCODE, REQUEST, RESPONSE);
     }
 
     /**
      * 获取普通类型
      * */
     public static List<LogContentEnums> getNormalEnums(){
-        return Arrays.asList(CLASS,METHOD,URI,REQUEST_METHOD,IP,TIME,PARAM,RETURN);
+        return Arrays.asList(CLZ, METHOD, URI,REQUEST_METHOD, IP, TIME, REQUEST, RESPONSE);
     }
 
     /**
      * 获取极简类型
      * */
     public static List<LogContentEnums> getMinimalEnums(){
-        return Arrays.asList(METHOD,URI,TIME);
+        return Arrays.asList(METHOD, URI, TIME);
     }
 }

@@ -6,6 +6,7 @@ package com.personal.annotation.properties;
 
 import com.personal.annotation.enums.LogContentEnums;
 import com.personal.annotation.enums.LogModeEnums;
+import com.personal.annotation.record.AbstractLogRecord;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class LogProperties {
 
     private boolean enable;
     private String split = ",";
+    private Class<? extends AbstractLogRecord> recordClass;
     private LogModeEnums mode = LogModeEnums.NORMAL;
     private List<LogContentEnums> includes;
 
@@ -37,6 +39,14 @@ public class LogProperties {
 
     public void setSplit(String split) {
         this.split = split;
+    }
+
+    public Class<? extends AbstractLogRecord> getRecordClass() {
+        return recordClass;
+    }
+
+    public void setRecordClass(Class<? extends AbstractLogRecord> recordClass) {
+        this.recordClass = recordClass;
     }
 
     public LogModeEnums getMode() {

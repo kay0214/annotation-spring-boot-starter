@@ -5,6 +5,7 @@ package com.personal.annotation.configure;
 
 import com.personal.annotation.aspect.LogAspect;
 import com.personal.annotation.properties.LogProperties;
+import com.personal.annotation.utils.SpringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * @author sunpeikai
@@ -19,6 +21,7 @@ import org.springframework.context.annotation.Configuration;
  * @description
  */
 @Configuration
+@Import(SpringUtils.class)
 @EnableConfigurationProperties({LogProperties.class})
 @ConditionalOnProperty(name = {"log.enable"}, havingValue = "true")
 public class LogAutoConfiguration {

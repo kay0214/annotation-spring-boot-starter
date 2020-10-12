@@ -5,8 +5,11 @@ package com.personal.annotation.aspect;
 
 import com.alibaba.fastjson.JSONObject;
 import com.personal.annotation.annotation.Log;
+import com.personal.annotation.entity.LogCallBack;
 import com.personal.annotation.enums.LogContentEnums;
 import com.personal.annotation.properties.LogProperties;
+import com.personal.annotation.record.AbstractLogRecord;
+import com.personal.annotation.utils.SpringUtils;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
@@ -16,7 +19,7 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -39,9 +42,11 @@ public class LogAspect {
     private static final Logger log = LoggerFactory.getLogger(LogAspect.class);
     private final List<LogContentEnums> enums;
     private final String split;
+    private final Class<? extends AbstractLogRecord> recordClass;
 
     public LogAspect(LogProperties logProperties) {
         this.split = logProperties.getSplit();
+        this.recordClass = logProperties.getRecordClass();
         switch (logProperties.getMode()){
             case ALL: this.enums = LogContentEnums.getAllEnums();break;
             case MINIMAL: this.enums = LogContentEnums.getMinimalEnums();break;
@@ -56,47 +61,62 @@ public class LogAspect {
 
     @Around("logPointcut()")
     public Object around(ProceedingJoinPoint point) throws Throwable {
-        // 定义了打印日志的内容
-        StringBuilder builder = new StringBuilder();
         // 获取注解
         Log logAnnotation = getAnnotationLog(point);
+        // 初始化Log记录
+        LogCallBack logRecord = new LogCallBack();
+        // 放入描述
+        logRecord.setDesc(logAnnotation != null ? logAnnotation.desc() : "");
         if(enums != null && enums.size() > 0){
             long startTime = System.currentTimeMillis();
             Object result = point.proceed();
             long time = System.currentTimeMillis() - startTime;
-            // 放入描述
-            if(logAnnotation != null && !StringUtils.isEmpty(logAnnotation.desc())){
-                builder.append("desc[").append(logAnnotation.desc()).append("]").append(this.split);
-            }
-            for (int i=0 ; i<enums.size() ; i++){
-                LogContentEnums content = enums.get(i);
-                String split = i == (enums.size() - 1) ? "":this.split;
-                switch (content){
-                    case CLASS: builder.append("class[").append(point.getSignature().getDeclaringTypeName()).append("]").append(split);break;
-                    case METHOD: builder.append("method[").append(point.getSignature().getName()).append("]").append(split);break;
-                    case URI: builder.append("uri[").append(getRequest().getRequestURI()).append("]").append(split);break;
-                    case REQUEST_METHOD: builder.append("requestMethod[").append(getRequest().getMethod()).append("]").append(split);break;
-                    case IP: builder.append("ip[").append(getRemoteIp()).append("]").append(split);break;
-                    case TIME: builder.append("time[").append(time).append("ms]").append(split);break;
-                    case CONTENT_TYPE: builder.append("contentType[").append(getRequest().getContentType()).append("]").append(split);break;
-                    case CONTENT_LENGTH: builder.append("contentLength[").append(getRequest().getContentLength()).append("]").append(split);break;
-                    case HEADER: builder.append("header[").append(getHeader()).append("]").append(split);break;
-                    case PARAM_ENCODE: builder.append("paramEncode[").append(getRequest().getCharacterEncoding()).append("]").append(split);break;
-                    case PARAM: builder.append("param[").append(getParam()).append("]").append(split);break;
-                    case RETURN: builder.append("return[").append(JSONObject.toJSONString(result)).append("]").append(split);break;
+            for (LogContentEnums content : enums) {
+                switch (content) {
+                    case CLZ: logRecord.setClz(point.getSignature().getDeclaringTypeName());break;
+                    case METHOD: logRecord.setMethod(point.getSignature().getName());break;
+                    case URI: logRecord.setUri(getRequest().getRequestURI());break;
+                    case REQUEST_METHOD: logRecord.setRequestMethod(getRequest().getMethod());break;
+                    case IP: logRecord.setIp(getRemoteIp());break;
+                    case TIME: logRecord.setTime(time);break;
+                    case CONTENT_TYPE: logRecord.setContentType(getRequest().getContentType());break;
+                    case CONTENT_LENGTH: logRecord.setContentLength(getRequest().getContentLength());break;
+                    case HEADER: logRecord.setHeader(getHeader());break;
+                    case PARAM_ENCODE: logRecord.setParamEncode(getRequest().getCharacterEncoding());break;
+                    case REQUEST: logRecord.setRequest(getParam());break;
+                    case RESPONSE: logRecord.setResponse(result != null ? JSONObject.toJSONString(result) : "");break;
                 }
             }
-            log.info(builder.toString());
+            // 日志回调和打印
+            this.callBackAndPrint(logAnnotation, logRecord);
             return result;
         }else{
-            // 放入描述
-            if(logAnnotation != null && !StringUtils.isEmpty(logAnnotation.desc())){
-                builder.append("desc[").append(logAnnotation.desc()).append("]");
-            }
             // 未定义打印日志的内容 - 直接放行
-            log.info(builder.toString());
+            // 日志回调和打印
+            this.callBackAndPrint(logAnnotation, logRecord);
             return point.proceed();
         }
+    }
+
+    /**
+     * 日志回调和打印
+     * */
+    private void callBackAndPrint(Log logAnnotation, LogCallBack logRecord){
+        // 日志回调
+        if(logAnnotation != null && logAnnotation.record() && recordClass != null){
+            try{
+                // 先将class作为spring管理的bean的形式执行
+                SpringUtils.getBean(recordClass).record(logRecord);
+            }catch (NoSuchBeanDefinitionException e){
+                try{
+                    // 如果抛出异常,说明这个recordClass并不是spring管理的bean
+                    recordClass.newInstance().record(logRecord);
+                }catch (InstantiationException | IllegalAccessException exception){
+                    log.error("log record call back fail => {}", exception.getMessage());
+                }
+            }
+        }
+        log.info(logRecord.toString(this.split));
     }
 
     private Log getAnnotationLog(JoinPoint joinPoint) {
