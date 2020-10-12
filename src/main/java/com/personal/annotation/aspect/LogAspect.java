@@ -6,7 +6,6 @@ package com.personal.annotation.aspect;
 import com.alibaba.fastjson.JSONObject;
 import com.personal.annotation.annotation.Log;
 import com.personal.annotation.entity.LogCallBack;
-import com.personal.annotation.enums.LogContentEnums;
 import com.personal.annotation.properties.LogProperties;
 import com.personal.annotation.record.AbstractLogRecord;
 import com.personal.annotation.utils.SpringUtils;
@@ -40,20 +39,14 @@ import java.util.Map;
 @Aspect
 public class LogAspect {
     private static final Logger log = LoggerFactory.getLogger(LogAspect.class);
-    private final List<LogContentEnums> enums;
+    private final List<LogProperties.LogContentEnums> enums;
     private final String split;
     private final Class<? extends AbstractLogRecord> recordClass;
 
     public LogAspect(LogProperties logProperties) {
         this.split = logProperties.getSplit();
         this.recordClass = logProperties.getRecordClass();
-        switch (logProperties.getMode()){
-            case ALL: this.enums = LogContentEnums.getAllEnums();break;
-            case MINIMAL: this.enums = LogContentEnums.getMinimalEnums();break;
-            case CUSTOM: this.enums = logProperties.getIncludes();break;
-            case NORMAL:
-            default: this.enums = LogContentEnums.getNormalEnums();break;
-        }
+        this.enums = logProperties.getContentList();
     }
 
     @Pointcut("@annotation(com.personal.annotation.annotation.Log)")
@@ -71,7 +64,7 @@ public class LogAspect {
             long startTime = System.currentTimeMillis();
             Object result = point.proceed();
             long time = System.currentTimeMillis() - startTime;
-            for (LogContentEnums content : enums) {
+            for (LogProperties.LogContentEnums content : enums) {
                 switch (content) {
                     case CLZ: logRecord.setClz(point.getSignature().getDeclaringTypeName());break;
                     case METHOD: logRecord.setMethod(point.getSignature().getName());break;
